@@ -17,7 +17,7 @@ A clean, responsive, and fully functional **CGPA (Cumulative GPA) Calculator** b
 
 ## Live Demo
 
-[View Live Demo](https://mohamedessam4334.github.io/CGPA-Calculator)  
+[View Live Demo](https://mohamedessam4334.github.io/CGPA_Calculator/)  
 
 
 ## How to Use
