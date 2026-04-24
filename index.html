@@ -19,7 +19,13 @@
         .semester-tab { transition: all 0.15s ease; }
         .course-row { transition: all 0.2s ease; }
         .course-row.removing { opacity: 0; transform: translateX(20px); }
+        .save-indicator { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .toast { animation: toastIn 0.3s ease-out, toastOut 0.3s ease-in 2.7s forwards; }
+        @keyframes toastIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes toastOut { from { transform: translateY(0); opacity: 1; } to { transform: translateY(20px); opacity: 0; } }
     </style>
+<base target="_blank">
 </head>
 <body class="bg-slate-50 min-h-screen">
 
@@ -28,10 +34,31 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">G</div>
-                <h1 class="text-lg font-bold text-slate-800">CGPA Calculator</h1>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 leading-tight">CGPA Calculator</h1>
+                    <div class="flex items-center gap-2">
+                        <span id="save-status" class="text-[10px] text-emerald-600 font-medium opacity-0 transition-opacity duration-300">Saved</span>
+                    </div>
+                </div>
             </div>
-            <div class="flex items-center gap-4">
-                <div class="hidden sm:block text-right">
+            <div class="flex items-center gap-3">
+                <!-- Save/Load Actions -->
+                <div class="hidden sm:flex items-center gap-1 mr-2">
+                    <button onclick="exportData()" class="text-xs font-medium text-slate-600 hover:text-indigo-600 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1" title="Download backup">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                        Export
+                    </button>
+                    <button onclick="document.getElementById('import-file').click()" class="text-xs font-medium text-slate-600 hover:text-indigo-600 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-colors flex items-center gap-1" title="Load backup">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" transform="rotate(180 10 10)"/></svg>
+                        Import
+                    </button>
+                    <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(this)">
+                    <button onclick="clearAllData()" class="text-xs font-medium text-slate-600 hover:text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors flex items-center gap-1" title="Clear all data">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
+                        Clear
+                    </button>
+                </div>
+                <div class="hidden sm:block text-right border-l border-slate-200 pl-4">
                     <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Cumulative GPA</p>
                     <p id="header-cgpa" class="text-xl font-bold text-indigo-600 leading-tight">0.00</p>
                 </div>
@@ -45,7 +72,7 @@
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div class="flex flex-col lg:flex-row gap-6">
-            
+
             <!-- Sidebar: Semesters -->
             <aside class="w-full lg:w-72 flex-shrink-0">
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -65,6 +92,13 @@
                             <span id="sidebar-cgpa" class="font-semibold text-indigo-600">CGPA: 0.00</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- Mobile Actions (visible only on small screens) -->
+                <div class="mt-4 sm:hidden bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex gap-2">
+                    <button onclick="exportData()" class="flex-1 text-xs font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 py-2 rounded-lg transition-colors">Export</button>
+                    <button onclick="document.getElementById('import-file').click()" class="flex-1 text-xs font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 py-2 rounded-lg transition-colors">Import</button>
+                    <button onclick="clearAllData()" class="flex-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 py-2 rounded-lg transition-colors">Clear</button>
                 </div>
 
                 <!-- Grading Scale -->
@@ -93,7 +127,11 @@
         </div>
     </div>
 
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
     <script>
+        const STORAGE_KEY = 'cgpa-calculator-data-v1';
         const gradePoints = {
             'A+': 4.00, 'A': 3.70, 'B+': 3.30, 'B': 3.00,
             'C+': 2.70, 'C': 2.30, 'D+': 2.00, 'D': 1.70, 'F': 1.00
@@ -104,6 +142,138 @@
         let activeSemesterId = null;
         let semesterCounter = 0;
         let courseCounter = 0;
+        let saveTimeout = null;
+
+        // ==================== LOCAL STORAGE ====================
+
+        function saveToStorage() {
+            const data = {
+                semesters: semesters,
+                activeSemesterId: activeSemesterId,
+                semesterCounter: semesterCounter,
+                courseCounter: courseCounter,
+                savedAt: new Date().toISOString()
+            };
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                showSaveIndicator();
+            } catch (e) {
+                console.warn('Could not save to localStorage:', e);
+                showToast('Storage full — try exporting data', 'error');
+            }
+        }
+
+        function loadFromStorage() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return false;
+                const data = JSON.parse(raw);
+                if (data.semesters && data.semesters.length > 0) {
+                    semesters = data.semesters;
+                    activeSemesterId = data.activeSemesterId;
+                    semesterCounter = data.semesterCounter || semesters.length;
+                    courseCounter = data.courseCounter || 0;
+                    // Ensure active semester exists
+                    if (!semesters.find(s => s.id === activeSemesterId)) {
+                        activeSemesterId = semesters[0].id;
+                    }
+                    return true;
+                }
+            } catch (e) {
+                console.warn('Could not load from localStorage:', e);
+            }
+            return false;
+        }
+
+        function clearAllData() {
+            if (!confirm('Are you sure? This will delete ALL semesters and courses permanently.')) return;
+            semesters = [];
+            activeSemesterId = null;
+            semesterCounter = 0;
+            courseCounter = 0;
+            localStorage.removeItem(STORAGE_KEY);
+            addSemester();
+            showToast('All data cleared', 'success');
+        }
+
+        function exportData() {
+            const data = {
+                semesters: semesters,
+                activeSemesterId: activeSemesterId,
+                semesterCounter: semesterCounter,
+                courseCounter: courseCounter,
+                exportedAt: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cgpa-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Backup downloaded', 'success');
+        }
+
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.semesters && Array.isArray(data.semesters)) {
+                        semesters = data.semesters;
+                        activeSemesterId = data.activeSemesterId || semesters[0]?.id;
+                        semesterCounter = data.semesterCounter || semesters.length;
+                        courseCounter = data.courseCounter || 0;
+                        saveToStorage();
+                        renderAll();
+                        showToast('Backup loaded successfully', 'success');
+                    } else {
+                        throw new Error('Invalid file format');
+                    }
+                } catch (err) {
+                    showToast('Invalid backup file', 'error');
+                }
+                input.value = ''; // reset
+            };
+            reader.readAsText(file);
+        }
+
+        function debouncedSave() {
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                saveToStorage();
+            }, 500); // Save 500ms after last change
+        }
+
+        function showSaveIndicator() {
+            const el = document.getElementById('save-status');
+            el.textContent = 'Saved';
+            el.className = 'text-[10px] text-emerald-600 font-medium transition-opacity duration-300';
+            el.style.opacity = '1';
+            setTimeout(() => {
+                el.style.opacity = '0';
+            }, 1500);
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-emerald-600' : 'bg-red-500';
+            const icon = type === 'success' 
+                ? '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+                : '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+
+            toast.className = `toast pointer-events-auto ${bgColor} text-white px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-2 text-sm font-medium`;
+            toast.innerHTML = `${icon}<span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ==================== CORE LOGIC ====================
 
         function generateId() {
             return 'id_' + Math.random().toString(36).substr(2, 9);
@@ -133,6 +303,7 @@
             semesters.push(sem);
             activeSemesterId = sem.id;
             renderAll();
+            debouncedSave();
             setTimeout(() => {
                 const el = document.getElementById(`sem-name-${sem.id}`);
                 if (el) el.focus();
@@ -142,20 +313,22 @@
         function removeSemester(id, event) {
             event.stopPropagation();
             if (semesters.length <= 1) {
-                alert("You must have at least one semester.");
+                showToast('You must keep at least one semester', 'error');
                 return;
             }
-            if (!confirm("Delete this semester and all its courses?")) return;
+            if (!confirm('Delete this semester and all its courses?')) return;
             semesters = semesters.filter(s => s.id !== id);
             if (activeSemesterId === id) {
                 activeSemesterId = semesters[0]?.id || null;
             }
             renderAll();
+            debouncedSave();
         }
 
         function setActiveSemester(id) {
             activeSemesterId = id;
             renderAll();
+            debouncedSave();
         }
 
         function updateSemesterName(id, name) {
@@ -163,6 +336,7 @@
             if (sem) sem.name = name;
             renderSidebar();
             updateHeaderStats();
+            debouncedSave();
         }
 
         function addCourseToSemester(semId) {
@@ -171,6 +345,7 @@
                 sem.courses.push(createCourse());
                 renderMainContent();
                 updateCalculations();
+                debouncedSave();
                 setTimeout(() => {
                     const inputs = document.querySelectorAll(`#semester-content input.course-name`);
                     if (inputs.length) inputs[inputs.length - 1].focus();
@@ -188,6 +363,7 @@
                         sem.courses = sem.courses.filter(c => c.id !== courseId);
                         renderMainContent();
                         updateCalculations();
+                        debouncedSave();
                     }, 200);
                 }
             }
@@ -200,6 +376,7 @@
                 if (course) {
                     course[field] = value;
                     updateCalculations();
+                    debouncedSave();
                 }
             }
         }
@@ -243,15 +420,17 @@
             return 'text-red-400';
         }
 
+        // ==================== RENDERING ====================
+
         function renderSidebar() {
             const container = document.getElementById('semester-list');
             container.innerHTML = '';
-            
+
             semesters.forEach(sem => {
                 const res = calculateSemesterGPA(sem);
                 const isActive = sem.id === activeSemesterId;
                 const gpaStr = res.credits > 0 ? res.gpa.toFixed(2) : '—';
-                
+
                 const div = document.createElement('div');
                 div.className = `semester-tab cursor-pointer px-4 py-3 flex items-center justify-between group ${isActive ? 'active bg-indigo-600' : 'hover:bg-slate-50'}`;
                 div.onclick = () => setActiveSemester(sem.id);
@@ -274,7 +453,7 @@
         function renderMainContent() {
             const container = document.getElementById('semester-content');
             const sem = semesters.find(s => s.id === activeSemesterId);
-            
+
             if (!sem) {
                 container.innerHTML = '<div class="p-8 text-center text-slate-400">No semester selected.</div>';
                 return;
@@ -384,7 +563,18 @@
             return div.innerHTML;
         }
 
-        addSemester();
+        // ==================== INIT ====================
+
+        function init() {
+            const hasData = loadFromStorage();
+            if (!hasData) {
+                addSemester();
+            } else {
+                renderAll();
+            }
+        }
+
+        init();
     </script>
 </body>
 </html>
